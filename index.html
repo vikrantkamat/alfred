@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alfred</title>
+    <style>
+        /* CSS Variables for Brand Colors */
+        :root {
+            --bg-cream: #FAF7F2;
+            --text-charcoal: #2C2C2C;
+            --accent-sage: #7A9E7E;
+            --accent-sage-hover: #688a6b;
+            --warn-amber: #D4A853;
+            --alert-red: #C0392B;
+            --alert-red-hover: #a32e22;
+            --white: #FFFFFF;
+            --light-gray: #E8E3DB;
+            --border-color: #D1CBC0;
+        }
+
+        /* Base Resets & Typography */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            background-color: var(--bg-cream);
+            color: var(--text-charcoal);
+            font-size: 18px;
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        h1, h2, h3, h4 {
+            font-weight: normal;
+            margin-bottom: 0.5em;
+        }
+
+        /* Buttons */
+        button {
+            font-family: inherit;
+            font-size: 18px;
+            min-height: 52px;
+            padding: 0 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--light-gray);
+            color: var(--text-charcoal);
+        }
+
+        button:hover {
+            background-color: var(--border-color);
+        }
+
+        button.primary {
+            background-color: var(--accent-sage);
+            color: var(--white);
+        }
+
+        button.primary:hover {
+            background-color: var(--accent-sage-hover);
+        }
+
+        button.danger {
+            background-color: var(--alert-red);
+            color: var(--white);
+        }
+
+        button.danger:hover {
+            background-color: var(--alert-red-hover);
+        }
+
+        /* Browser Shell */
+        #browser-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            display: flex;
+            align-items: center;
+            padding: 16px 24px;
+            background-color: var(--white);
+            border-bottom: 2px solid var(--border-color);
+            gap: 16px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        #address-bar {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        #url-input {
+            width: 100%;
+            height: 52px;
+            font-family: inherit;
+            font-size: 20px;
+            padding: 0 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-cream);
+            color: var(--text-charcoal);
+        }
+
+        #url-input:focus {
+            outline: none;
+            border-color: var(--accent-sage);
+        }
+
+        /* Main Content Area */
+        #main-area {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        /* Viewport (Fake Pages) */
+        #viewport {
+            flex-grow: 1;
+            background-color: var(--white);
+            position: relative;
+            overflow-y: auto;
+            transition: opacity 0.3s ease;
+        }
+
+        .page {
+            display: none;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Alfred Sidebar */
+        #sidebar {
+            width: 320px;
+            min-width: 320px;
+            background-color: var(--bg-cream);
+            border-left: 2px solid var(--border-color);
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+            transition: background-color 0.3s ease;
+        }
+
+        #sidebar.pulsing {
+            animation: pulse-bg 2s infinite;
+        }
+
+        @keyframes pulse-bg {
+            0% { background-color: var(--bg-cream); }
+            50% { background-color: #f0eadd; }
+            100% { background-color: var(--bg-cream); }
+        }
+
+        .alfred-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .alfred-icon {
+            width: 64px;
+            height: 64px;
+            background-color: var(--accent-sage);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-style: italic;
+        }
+
+        .alfred-title {
+            font-size: 24px;
+            color: var(--accent-sage);
+        }
+
+        .summary-box {
+            background-color: var(--white);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        .summary-box h3 {
+            color: var(--accent-sage);
+            font-size: 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tip-box {
+            background-color: #f7f1e6;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--warn-amber);
+            margin-top: 16px;
+        }
+
+        .tip-box h4 {
+            color: var(--warn-amber);
+            margin-bottom: 8px;
+        }
+
+        #explain-btn {
+            width: 100%;
+            margin-top: auto;
+            background-color: var(--white);
+            border: 2px solid var(--accent-sage);
+            color: var(--accent-sage);
+            font-weight: bold;
+        }
+
+        #explain-btn:hover {
+            background-color: var(--accent-sage);
+            color: var(--white);
+        }
+
+        /* Overlays & Modals */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(250, 247, 242, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 48px;
+            border-radius: 16px;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 2px solid var(--border-color);
+        }
+
+        .modal-content h2 {
+            font-size: 32px;
+            color: var(--alert-red);
+            margin-bottom: 24px;
+        }
+
+        .modal-content.friendly h2 {
+            color: var(--accent-sage);
+        }
+
+        .modal-content p {
+            font-size: 22px;
+            margin-bottom: 32px;
+        }
+
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .modal-actions button {
+            width: 100%;
+            min-height: 64px;
+            font-size: 22px;
+        }
+
+        /* Fake Page Styles */
+        .news-article h1 { font-size: 44px; margin-bottom: 24px; line-height: 1.2; }
+        .news-article p { font-size: 20px; margin-bottom: 20px; color: #444; line-height: 1.8; }
+        .news-image { width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 24px; }
+        
+        .bank-login { max-width: 400px; margin: 60px auto; text-align: center; }
+        .bank-login input { width: 100%; height: 52px; margin-bottom: 20px; font-size: 18px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .bank-login button { width: 100%; background-color: #0056b3; color: white; }
+
+        .shop-item { display: flex; gap: 40px; margin-top: 40px; }
+        .shop-image { width: 400px; height: 400px; object-fit: cover; border-radius: 8px; }
+        .shop-details h2 { font-size: 32px; margin-bottom: 16px; }
+        .shop-price { font-size: 28px; color: #B12704; margin-bottom: 24px; }
+
+        .email-list { margin-top: 20px; }
+        .email-row { padding: 20px; border-bottom: 1px solid #eee; display: flex; gap: 20px; cursor: pointer; }
+        .email-row:hover { background-color: #f9f9f9; }
+        .email-sender { font-weight: bold; width: 150px; }
+        
+        /* Loading Bar */
+        #loading-bar {
+            height: 4px;
+            background-color: var(--accent-sage);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            transition: width 0.3s ease;
+            z-index: 100;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="browser-shell">
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <div class="nav-buttons">
+            <button id="btn-back" onclick="navigateBack()">← Go Back</button>
+            <button id="btn-forward" onclick="navigateForward()">Forward →</button>
+            <button id="btn-refresh" onclick="refreshPage()">Refresh</button>
+        </div>
+        <div id="address-bar">
+            <input type="text" id="url-input" value="alfred://home" onkeypress="handleUrlEnter(event)">
+        </div>
+        <button id="btn-demo-scam" onclick="triggerScamPopUp()">Demo: Scam Alert</button>
+        <button id="btn-help" class="primary" onclick="showHelpModal()">📞 Call for Help</button>
+    </div>
+
+    <!-- Main Area -->
+    <div id="main-area">
+        <!-- Viewport -->
+        <div id="viewport">
+            <div id="loading-bar"></div>
+
+            <!-- Page 1: Home -->
+            <div id="page-home" class="page active">
+                <div style="text-align: center; margin-top: 80px;">
+                    <div class="alfred-icon" style="width: 120px; height: 120px; font-size: 60px; margin: 0 auto 32px auto;">A</div>
+                    <h1 style="font-size: 48px; color: var(--accent-sage);">Welcome to Alfred</h1>
+                    <p style="font-size: 24px; color: #666; max-width: 600px; margin: 0 auto;">Your trusted internet companion. Where would you like to go today?</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 16px; max-width: 400px; margin: 48px auto;">
+                        <button onclick="navigateTo('www.daily-news.com')">Read the News</button>
+                        <button onclick="navigateTo('www.my-email-inbox.com')">Check Email</button>
+                        <button onclick="navigateTo('www.shop-online.com')">Go Shopping</button>
+                        <button onclick="navigateTo('www.secure-bank-login.com')">Visit the Bank</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 2: News -->
+            <div id="page-news" class="page news-article">
+                <h1>Local Garden Yields Record-Breaking Tomatoes This Summer</h1>
+                <p>By Sarah Jenkins • Published Today</p>
+                <!-- Stock Image from Unsplash -->
+                <img src="https://images.unsplash.com/photo-1592924357228-91a4daadcfea?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="news-image" alt="Red Tomato">
+                <p>In what local horticulturists are calling a miraculous season, community gardens across the county are reporting unprecedented vegetable yields. The secret, many say, has been the mild spring followed by consistent, gentle rains in early July.</p>
+                <p>"I've never seen anything like it," said Arthur Pendelton, a retired teacher who has been tending his plot for over thirty years. "My Brandywine tomatoes are the size of cantaloupes, and the flavor is simply out of this world."</p>
+                <p>The sudden boom in produce isn't just limited to tomatoes. Squash, cucumbers, and bell peppers are also seeing massive growth. Local farmers' markets have had to expand their stalls to accommodate the influx of fresh vegetables, and prices for locally sourced produce have hit an all-time low.</p>
+                <p>Dr. Helen Richards, a botanist at the state university, attributes the phenomenon to a rare combination of mineral-rich soil deposits from winter flooding and the optimal temperature ranges we experienced during the critical germination weeks. "It's a perfect storm for agriculture," she noted. "We are currently studying soil samples to see if we can replicate these conditions artificially next year."</p>
+                <p>For now, residents are encouraged to enjoy the bounty. Community centers have started hosting free canning and preserving workshops to help families store the excess food for the winter months. If you have extra vegetables you can't use, the county food bank is accepting fresh produce donations every weekday morning.</p>
+                <p>Experts recommend harvesting early in the morning to preserve the fresh flavor and avoid the midday heat, which can soften the skins of delicate heirloom varieties.</p>
+            </div>
+
+            <!-- Page 3: Bank Login -->
+            <div id="page-bank" class="page bank-login">
+                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%230056b3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='11' width='18' height='11' rx='2' ry='2'></rect><path d='M7 11V7a5 5 0 0 1 10 0v4'></path></svg>" alt="Bank Lock" style="margin-bottom: 20px;">
+                <h1 style="font-family: Arial, sans-serif; color: #333;">SecureBank Online</h1>
+                <p style="font-family: Arial, sans-serif; color: #666; margin-bottom: 30px;">Please sign in to access your accounts.</p>
+                <input type="text" placeholder="Username or Account Number">
+                <input type="password" placeholder="Password">
+                <button style="font-family: Arial, sans-serif; font-size: 20px; padding: 15px;" onclick="navigateToBankDash()">Secure Sign In</button>
+            </div>
+
+            <!-- Page 3.5: Bank Dashboard -->
+            <div id="page-bank-dash" class="page">
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px;">
+                    <h1 style="font-family: Arial, sans-serif; color: #333; margin: 0;">SecureBank Dashboard</h1>
+                    <button style="font-size: 16px; min-height: 40px; background-color: #eee;" onclick="navigateTo('www.secure-bank-login.com')">Sign Out</button>
+                </div>
+                
+                <h2 style="font-family: Arial, sans-serif; color: #555;">Your Accounts</h2>
+                <div style="padding: 30px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; background-color: #fcfcfc;">
+                    <div>
+                        <h3 style="font-family: Arial, sans-serif; color: #333; margin-bottom: 8px;">Everyday Checking (...3941)</h3>
+                        <p style="font-size: 36px; color: #2C2C2C; margin: 0; font-family: Arial, sans-serif;">$4,502.18</p>
+                        <p style="color: #666; font-size: 16px; margin-top: 4px;">Available Balance</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 20px;">
+                    <button style="background-color: #0056b3; color: white; flex-grow: 1;" onclick="triggerBankWarning()">Withdraw Funds</button>
+                    <button style="background-color: #eee; flex-grow: 1;">Transfer Money</button>
+                </div>
+            </div>
+
+            <!-- Page 4: Shop -->
+            <div id="page-shop" class="page">
+                <h1>AmazingStore Online</h1>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                
+                <!-- Item 1 -->
+                <div class="shop-item">
+                    <img src="https://images.pexels.com/photos/6313460/pexels-photo-6313460.jpeg?auto=compress&cs=tinysrgb&w=800" class="shop-image" alt="Wool Blanket">
+                    <div class="shop-details">
+                        <h2>Premium Irish Wool Throw Blanket</h2>
+                        <div style="color: #f5a623; font-size: 24px; margin-bottom: 8px;">★★★★☆ (128 reviews)</div>
+                        <div class="shop-price">$89.99</div>
+                        <p style="margin-bottom: 24px;">Stay warm this winter with our authentic, soft wool blanket. Perfect for the living room sofa or as an extra layer on your bed.</p>
+                        <button style="background-color: #f0c14b; border: 1px solid #a88734; width: 250px;">Add to Cart</button>
+                    </div>
+                </div>
+
+                <!-- Item 2 -->
+                <div class="shop-item" style="border-top: 1px solid #eee; padding-top: 40px;">
+                    <img src="https://images.pexels.com/photos/973516/pexels-photo-973516.jpeg?auto=compress&cs=tinysrgb&w=800" class="shop-image" alt="Coffee Maker">
+                    <div class="shop-details">
+                        <h2>Classic Drip Coffee Maker</h2>
+                        <div style="color: #f5a623; font-size: 24px; margin-bottom: 8px;">★★★★★ (452 reviews)</div>
+                        <div class="shop-price">$45.00</div>
+                        <p style="margin-bottom: 24px;">Start your morning right with this easy-to-use, reliable 12-cup coffee maker. Features automatic shut-off and programmable brew times.</p>
+                        <button style="background-color: #f0c14b; border: 1px solid #a88734; width: 250px;">Add to Cart</button>
+                    </div>
+                </div>
+
+                <!-- Item 3 -->
+                <div class="shop-item" style="border-top: 1px solid #eee; padding-top: 40px;">
+                    <img src="https://images.pexels.com/photos/3394665/pexels-photo-3394665.jpeg?auto=compress&cs=tinysrgb&w=800" class="shop-image" alt="Headphones">
+                    <div class="shop-details">
+                        <h2>Noise Cancelling Headphones</h2>
+                        <div style="color: #f5a623; font-size: 24px; margin-bottom: 8px;">★★★☆☆ (89 reviews)</div>
+                        <div class="shop-price">$120.50</div>
+                        <p style="margin-bottom: 24px;">Enjoy your music in peace with these comfortable over-ear headphones. Perfect for traveling or reading without distractions.</p>
+                        <button style="background-color: #f0c14b; border: 1px solid #a88734; width: 250px;">Add to Cart</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 5: Email -->
+            <div id="page-email" class="page">
+                <div id="email-list-view">
+                    <h1>Your Inbox</h1>
+                    <div style="margin-bottom: 20px;">
+                        <button style="font-size: 16px; min-height: 40px;">Compose New</button>
+                    </div>
+                    <div class="email-list">
+                        <div class="email-row" onclick="openEmail('email-family')">
+                            <div class="email-sender">Granddaughter</div>
+                            <div>Photos from the weekend trip! We missed you.</div>
+                        </div>
+                        <div class="email-row" onclick="openEmail('email-doctor')">
+                            <div class="email-sender">Dr. Smith's Office</div>
+                            <div>Appointment Reminder: Tuesday at 10:00 AM</div>
+                        </div>
+                        <div class="email-row" style="background-color: #fff9e6;" onclick="triggerScamPopUp()">
+                            <div class="email-sender">URGENT ALERT</div>
+                            <div>Your account has been locked. Click here to verify your identity.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Detail Views -->
+                <div id="email-family" style="display: none;">
+                    <button style="margin-bottom: 20px; min-height: 40px;" onclick="closeEmail()">← Back to Inbox</button>
+                    <h2>Photos from the weekend trip! We missed you.</h2>
+                    <p style="color: #666;"><strong>From:</strong> Granddaughter</p>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    <p style="margin-bottom: 20px;">Hi Grandma,</p>
+                    <p style="margin-bottom: 20px;">We went to the park this weekend and had a lovely time. Wish you could have been there! Here is a photo we took.</p>
+                    <!-- Stock Image from Unsplash -->
+                    <img src="https://images.unsplash.com/photo-1511895426328-dc8714191300?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" style="width: 100%; max-width: 500px; border-radius: 8px;" alt="Family Trip">
+                </div>
+                
+                <div id="email-doctor" style="display: none;">
+                    <button style="margin-bottom: 20px; min-height: 40px;" onclick="closeEmail()">← Back to Inbox</button>
+                    <h2>Appointment Reminder: Tuesday at 10:00 AM</h2>
+                    <p style="color: #666;"><strong>From:</strong> Dr. Smith's Office</p>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    <p>This is an automated reminder for your upcoming appointment with Dr. Smith on Tuesday at 10:00 AM. Please arrive 15 minutes early.</p>
+                </div>
+                
+                <div id="email-urgent" style="display: none;">
+                    <!-- This div might not be reached now since we trigger popup directly, but keeping it just in case -->
+                    <button style="margin-bottom: 20px; min-height: 40px;" onclick="closeEmail()">← Back to Inbox</button>
+                    <h2>URGENT ALERT</h2>
+                    <p style="color: #666;"><strong>From:</strong> Customer Support</p>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    <p style="margin-bottom: 20px;">Your account has been temporarily locked due to suspicious activity. Please click the link below to verify your identity and restore access.</p>
+                    <button style="color: blue; text-decoration: underline; background: none; border: none; padding: 0; font-size: 18px; cursor: pointer;">Verify Identity Now</button>
+                </div>
+            </div>
+
+            <!-- Overlays -->
+            
+            <!-- Bank Warning Overlay -->
+            <div id="overlay-bank-warning" class="overlay">
+                <div class="modal-content">
+                    <h2>Hold on - Alfred noticed something.</h2>
+                    <p>This page is asking you to move money. Are you absolutely sure you want to withdraw these funds?</p>
+                    <div class="modal-actions">
+                        <button class="primary" onclick="closeOverlay('overlay-bank-warning')">Cancel and Go Back to Safety</button>
+                        <button style="background-color: transparent; border: 1px solid #ccc; font-size: 18px; min-height: 44px;" onclick="closeOverlay('overlay-bank-warning')">I know what I am doing, continue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scam Pop-up Warning -->
+            <div id="overlay-scam" class="overlay">
+                <div class="modal-content">
+                    <h2>Alfred Blocked a Scam</h2>
+                    <p>A website just tried to show you a scary warning message claiming your computer was infected with a virus. <strong>This was a lie.</strong></p>
+                    <p style="font-size: 18px; color: #666;">Alfred has safely blocked it. Your computer is completely fine.</p>
+                    <div class="modal-actions" style="margin-top: 32px;">
+                        <button class="primary" onclick="closeOverlay('overlay-scam')">Thank you, Alfred</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call Help Modal -->
+            <div id="overlay-help" class="overlay">
+                <div class="modal-content friendly">
+                    <h2 id="help-title">Calling for Help...</h2>
+                    <p id="help-text">Connecting you to your daughter, Sarah...</p>
+                    
+                    <div id="help-loader" style="margin: 32px auto; width: 64px; height: 64px; border: 6px solid #f3f3f3; border-top: 6px solid var(--accent-sage); border-radius: 50%; animation: spin 2s linear infinite;"></div>
+                    
+                    <div class="modal-actions" style="margin-top: 32px;">
+                        <button id="btn-cancel-help" onclick="closeOverlay('overlay-help')">Cancel Call</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Explanation Modal -->
+            <div id="overlay-explain" class="overlay">
+                <div class="modal-content friendly" style="text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                        <div class="alfred-icon" style="width: 48px; height: 48px; font-size: 24px;">A</div>
+                        <h2 style="margin: 0;">Alfred's Explanation</h2>
+                    </div>
+                    <p id="explain-text" style="font-size: 20px; line-height: 1.8;">...</p>
+                    <div class="modal-actions" style="margin-top: 40px;">
+                        <button class="primary" onclick="closeOverlay('overlay-explain')">Got it, thanks!</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <div class="alfred-header">
+                <div class="alfred-icon">A</div>
+                <div class="alfred-title">Alfred</div>
+            </div>
+
+            <div class="summary-box">
+                <h3 id="sidebar-title">Getting Started</h3>
+                <p id="sidebar-summary">Welcome to the internet. I'm here to help you read the news, check your email, and stay perfectly safe while doing it.</p>
+                
+                <div class="tip-box" id="sidebar-tip-box" style="display: none;">
+                    <h4>Alfred's Tip</h4>
+                    <p id="sidebar-tip">Remember, you can always click the "Call for Help" button if you get stuck.</p>
+                </div>
+            </div>
+
+            <button id="explain-btn" onclick="showExplanation()">Explain This Page to Me</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+
+<script>
+    // Site Data Directory
+    const SITES = {
+        'alfred://home': {
+            id: 'page-home',
+            title: 'Welcome Home',
+            summary: "This is your starting page. From here, you can easily go anywhere you'd like.",
+            tip: "Click any of the large buttons on the left to visit a website.",
+            explain: "This is a safe starting point. It's like the front hall of your house. It just gives you options of where to go next. It doesn't ask for any information.",
+            safe: true
+        },
+        'www.daily-news.com': {
+            id: 'page-news',
+            title: 'Reading the News',
+            summary: "This looks like a news website. It's safe to read the articles here.",
+            tip: "You can use the scroll wheel on your mouse to read the rest of the article.",
+            explain: "This page is displaying a public news article about gardening. It wants you to read the story. It is completely safe. It is not asking for any passwords or personal information.",
+            safe: true
+        },
+        'www.secure-bank-login.com': {
+            id: 'page-bank',
+            title: 'Checking Your Bank',
+            summary: "This is a bank login page. It will ask for your password.",
+            tip: "Never type your password unless you are absolutely sure you meant to come to this exact page.",
+            explain: "This page is asking you to prove who you are by typing in a secret password so it can show you your money. Because it involves your finances, we always want to be extra careful here.",
+            safe: true,
+            triggerWarning: false
+        },
+        'www.secure-bank-dashboard.com': {
+            id: 'page-bank-dash',
+            title: 'Bank Dashboard',
+            summary: "You are securely signed in to your bank.",
+            tip: "You can check your balance or move money from here.",
+            explain: "This is your private banking dashboard. It shows how much money you have in your account. You can use the buttons here to move money around.",
+            safe: true,
+            triggerWarning: false
+        },
+        'www.shop-online.com': {
+            id: 'page-shop',
+            title: 'Shopping Online',
+            summary: "This is a store where you can buy things. Right now, you are looking at a blanket.",
+            tip: "If you want to buy it, you click 'Add to Cart', just like putting an item in a basket at the grocery store.",
+            explain: "This is a catalog page for a store. It is showing you details about a wool blanket so you can decide if you want to buy it. It's safe to look around. You won't be charged unless you specifically enter your credit card later.",
+            safe: true
+        },
+        'www.my-email-inbox.com': {
+            id: 'page-email',
+            title: 'Checking Email',
+            summary: "These are letters people have sent to you over the internet.",
+            tip: "Not all emails are from friends. If you don't recognize the sender, it's best not to click on it.",
+            explain: "This page shows your digital mailbox. You have a message from your granddaughter and a doctor. There is also a message claiming to be an 'urgent alert'. Alfred recommends ignoring urgent alerts, as they are often from bad actors trying to trick you.",
+            safe: true
+        }
+    };
+
+    // State
+    let history = ['alfred://home'];
+    let currentIndex = 0;
+    
+    // Elements
+    const urlInput = document.getElementById('url-input');
+    const btnBack = document.getElementById('btn-back');
+    const btnForward = document.getElementById('btn-forward');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarTitle = document.getElementById('sidebar-title');
+    const sidebarSummary = document.getElementById('sidebar-summary');
+    const sidebarTipBox = document.getElementById('sidebar-tip-box');
+    const sidebarTip = document.getElementById('sidebar-tip');
+    const loadingBar = document.getElementById('loading-bar');
+
+    // Initialize
+    updateUI();
+
+    // Navigation Logic
+    function navigateTo(url, isHistoryAction = false) {
+        if (!SITES[url]) {
+            urlInput.value = url;
+            alert("Alfred says: I couldn't find that page in this demo. Try clicking one of the buttons on the home page.");
+            return;
+        }
+
+        // Simulate loading
+        urlInput.value = url;
+        loadingBar.style.width = '30%';
+        loadingBar.style.opacity = '1';
+        
+        setTimeout(() => {
+            loadingBar.style.width = '70%';
+        }, 150);
+
+        setTimeout(() => {
+            loadingBar.style.width = '100%';
+            
+            setTimeout(() => {
+                loadingBar.style.opacity = '0';
+                loadingBar.style.width = '0%';
+                
+                // Complete navigation
+                if (!isHistoryAction) {
+                    // Remove future history if we navigated somewhere new
+                    history = history.slice(0, currentIndex + 1);
+                    history.push(url);
+                    currentIndex++;
+                }
+
+                // If going back to email, reset to list view
+                if (url === 'www.my-email-inbox.com') {
+                    closeEmail();
+                }
+
+                showPage(url);
+                updateUI();
+                
+            }, 200);
+        }, 400);
+    }
+
+    function showPage(url) {
+        const siteData = SITES[url];
+        
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+
+        // Show target page
+        document.getElementById(siteData.id).classList.add('active');
+
+        // Update Alfred Sidebar
+        sidebarTitle.innerText = siteData.title;
+        sidebarSummary.innerText = siteData.summary;
+        
+        if (siteData.tip) {
+            sidebarTipBox.style.display = 'block';
+            sidebarTip.innerText = siteData.tip;
+        } else {
+            sidebarTipBox.style.display = 'none';
+        }
+
+        // Pulse sidebar gently to draw attention
+        sidebar.classList.add('pulsing');
+        setTimeout(() => sidebar.classList.remove('pulsing'), 2000);
+    }
+
+    function updateUI() {
+        btnBack.disabled = currentIndex === 0;
+        btnBack.style.opacity = currentIndex === 0 ? '0.5' : '1';
+        btnBack.style.cursor = currentIndex === 0 ? 'not-allowed' : 'pointer';
+
+        btnForward.disabled = currentIndex === history.length - 1;
+        btnForward.style.opacity = currentIndex === history.length - 1 ? '0.5' : '1';
+        btnForward.style.cursor = currentIndex === history.length - 1 ? 'not-allowed' : 'pointer';
+        
+        urlInput.value = history[currentIndex];
+    }
+
+    function navigateBack() {
+        // If there's an active overlay, close it
+        const overlays = document.querySelectorAll('.overlay.active');
+        if (overlays.length > 0) {
+            overlays.forEach(o => o.classList.remove('active'));
+            if (currentIndex > 0) {
+                currentIndex--;
+                navigateTo(history[currentIndex], true);
+            }
+            return;
+        }
+
+        if (currentIndex > 0) {
+            currentIndex--;
+            navigateTo(history[currentIndex], true);
+        }
+    }
+
+    function navigateForward() {
+        if (currentIndex < history.length - 1) {
+            currentIndex++;
+            navigateTo(history[currentIndex], true);
+        }
+    }
+
+    function refreshPage() {
+        navigateTo(history[currentIndex], true);
+    }
+
+    function handleUrlEnter(event) {
+        if (event.key === 'Enter') {
+            navigateTo(urlInput.value);
+        }
+    }
+
+    // Modal & Overlay Logic
+    function closeOverlay(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    function triggerScamPopUp() {
+        document.getElementById('overlay-scam').classList.add('active');
+        sidebarTitle.innerText = "Alfred Stepped In";
+        sidebarSummary.innerText = "I caught a bad website trying to scare you. I've blocked it.";
+        sidebarTipBox.style.display = 'none';
+        sidebar.classList.add('pulsing');
+        setTimeout(() => sidebar.classList.remove('pulsing'), 2000);
+    }
+
+    function showHelpModal() {
+        const overlay = document.getElementById('overlay-help');
+        const title = document.getElementById('help-title');
+        const text = document.getElementById('help-text');
+        const loader = document.getElementById('help-loader');
+        const btn = document.getElementById('btn-cancel-help');
+        
+        // Reset state
+        title.innerText = "Calling for Help...";
+        text.innerText = "Connecting you to your daughter, Sarah...";
+        loader.style.display = "block";
+        btn.innerText = "Cancel Call";
+        
+        overlay.classList.add('active');
+
+        // Simulate connection sequence
+        setTimeout(() => {
+            if (!overlay.classList.contains('active')) return;
+            text.innerText = "Sarah's phone is ringing...";
+        }, 1500);
+
+        setTimeout(() => {
+            if (!overlay.classList.contains('active')) return;
+            title.innerText = "Connected!";
+            text.innerText = "Sarah has joined. She can now see your screen and will help you navigate.";
+            loader.style.display = "none";
+            btn.innerText = "End Call with Sarah";
+        }, 4000);
+    }
+
+    function showExplanation() {
+        const currentUrl = history[currentIndex];
+        const siteData = SITES[currentUrl];
+        
+        document.getElementById('explain-text').innerText = siteData.explain;
+        document.getElementById('overlay-explain').classList.add('active');
+    }
+
+    // Custom Bank Logic
+    function navigateToBankDash() {
+        navigateTo('www.secure-bank-dashboard.com');
+    }
+
+    function triggerBankWarning() {
+        document.getElementById('overlay-bank-warning').classList.add('active');
+    }
+
+    // Custom Email Logic
+    function openEmail(emailId) {
+        document.getElementById('email-list-view').style.display = 'none';
+        document.getElementById('email-family').style.display = 'none';
+        document.getElementById('email-doctor').style.display = 'none';
+        document.getElementById('email-urgent').style.display = 'none';
+        
+        document.getElementById(emailId).style.display = 'block';
+    }
+
+    function closeEmail() {
+        document.getElementById('email-family').style.display = 'none';
+        document.getElementById('email-doctor').style.display = 'none';
+        document.getElementById('email-urgent').style.display = 'none';
+        
+        document.getElementById('email-list-view').style.display = 'block';
+    }
+
+</script>
+
+</body>
+</html>
