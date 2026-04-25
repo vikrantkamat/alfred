@@ -1,3 +1,3 @@
 # alfred
 
-browser disgned for people who arent tech heavy
+browser designed for people who arent tech heavy
